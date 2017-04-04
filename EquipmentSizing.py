@@ -15,8 +15,25 @@ import math
 USGC_Correction = 1.35
 USDtoCAD = 1.35
 LocationFactor = 1.2
-ContFeeFactor = 1.18    
+ContFeeFactor = 1.18
 AuxFactor = 1.21
+
+def plate_frame_hex_cost(UA_product,U_heattransfcoeff,SandTmodifier,Fp_Fm_prod,Fa_BM,Cp):
+    U_heattransfcoeff_modified = U_heattransfcoeff * SandTmodifier    
+    hex_surf_area_A = UA_product/U_heattransfcoeff_modified
+    C_BM_2004 = Cp * Fa_BM
+    C_BM_2016_CAD = usd04tocad16(C_BM_2004)
+    print "U*A = %s (From VMGSim Simulation)" % (UA_product)
+    print "U value from U&V Table 4.15 = ", U_heattransfcoeff   
+    print "Plate and Frame modifier from U&V Table 4.15 = ", SandTmodifier    
+    print "Modified U value for Plate and Frame Heat Exchangers = ", U_heattransfcoeff_modified 
+    print "Fp*Fm = ", Fp_Fm_prod
+    print "Fa_BM = ", Fa_BM 
+    print "Heat Exchanger Surface Area = ", hex_surf_area_A    
+    print ""    
+    print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004
+    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD    
+    return C_BM_2016_CAD
 
 def separatorcost(L,D,Cp,Fp,Fm,Fa_BM):  
     print "\nLength = ", L
@@ -31,17 +48,14 @@ def separatorcost(L,D,Cp,Fp,Fm,Fa_BM):
     print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD
     return C_BM_2016_CAD
     
-def compcost(Cp_c,F_BM_c,Cp_e,F_BM_e):
+def comp_blow_cost(Cp_c,F_BM_c,C_BM_d):
     C_BM_c = Cp_c * F_BM_c
-    C_BM_e = Cp_e * F_BM_e
-    C_BM_2004 = C_BM_c + C_BM_e
+    C_BM_2004 = C_BM_c + C_BM_d
     C_BM_2016_CAD = usd04tocad16(C_BM_2004)
     print "Purchase Cost of compressor, Cp_c (U&V Fig 5.30) = ", Cp_c
     print "Bare module factor for compressor, F_BM (U&V Fig 5.30) = ", F_BM_c
     print "Bare module cost for compressor, C_BM = ", C_BM_c
-    print "Purchase Cost of engine, Cp_e (U&V Fig 5.21) = ", Cp_e
-    print "Bare module factor for engine, F_BM_e (U&V Fig 5.21) = ", F_BM_e
-    print "Bare module cost for engine, C_BM_e = ", C_BM_e
+    print "Bare module cost for engine (U&V Fig 5.20), C_BM_e = ", C_BM_d
     print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004
     print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD
     return C_BM_2016_CAD
@@ -76,9 +90,34 @@ def hex_costing(Cp_vessel,F_BM_vessel,F_p_vessel,Cp_coils,F_BM_coils):
     C_BM_2004 = (Cp_vessel * F_BM_vessel * F_p_vessel) + (Cp_coils*F_BM_coils)
     C_BM_2016_CAD = usd04tocad16(C_BM_2004)
     print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004    
-    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD    
+    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD 
     return C_BM_2016_CAD
     
+def fuelcell_costing(C_BM_fc_04):
+    C_BM_2004 = C_BM_fc_04  
+    C_BM_2016_CAD = usd04tocad16(C_BM_2004)    
+    print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004    
+    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD 
+    return C_BM_2016_CAD
+    
+def pump_costing(Cp,Fm,Fp,Fa_BM):
+    C_BM_2004 = Cp * Fa_BM
+    C_BM_2016_CAD = usd04tocad16(C_BM_2004)
+    print "Fm (U&V Fig 5.49)= ", Fm    
+    print "Fp (U&V Fig 5.50) = ", Fp  
+    print "Purchase Cost, Cp (from U&V fig 5.49) = ", Cp
+    print "Bare module factor, Fa_BM (from U&V fig 5.52) = ", Fa_BM
+    print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004    
+    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD 
+    return C_BM_2016_CAD
+
+def expander_costing(Cp,F_BM):
+    C_BM_2004 = Cp * F_BM
+    C_BM_2016_CAD = usd04tocad16(C_BM_2004)
+    print "Bare Module Cost ($US, 2004), C_BM_2004 = ", C_BM_2004    
+    print "Bare Module Cost ($CA, 2016), C_BM_2016_CAD = ", C_BM_2016_CAD 
+    return C_BM_2016_CAD
+
 def extracosts(C_BM):
     C_TM = C_BM * ContFeeFactor * LocationFactor
     C_GR = C_TM * AuxFactor
@@ -91,103 +130,97 @@ def usd04tocad16(cost):
     C_BM_2016_CAD = C_BM_2016 * USDtoCAD
     return C_BM_2016_CAD
     
+
+print "\nPlate and Frame Heat Exchanger Hx100"
+C_BM_pf_hex100 = plate_frame_hex_cost(14138.13,100,2,2.3,5,12000)
+
+print "\nPlate and Frame Heat Exchanger Hx110"
+C_BM_pf_hex110 = plate_frame_hex_cost(34764.31,100,2,2.3,5,20000)
+
+print "\nPlate and Frame Heat Exchanger Hx120"
+C_BM_pf_hex120 = plate_frame_hex_cost(1559.12,40,2,2.3,5,5000)
+
+print "\nPlate and Frame Heat Exchanger Hx130"
+C_BM_pf_hex130 = plate_frame_hex_cost(754.19,100,2,2.3,5,2500)
+
+print "\nPlate and Frame Heat Exchanger Hx140"
+C_BM_pf_hex140 = plate_frame_hex_cost(1176.64,331,2,2.3,5,1500)
+
+print "\nPlate and Frame Heat Exchanger Hx150"
+C_BM_pf_hex150 = plate_frame_hex_cost(3734.99,40,2,2.3,5,80000)
+
+print "\nPlate and Frame Heat Exchanger Hx160"
+C_BM_pf_hex160 = plate_frame_hex_cost(571.75,106,2,2.3,5,1800)
+
+print "\nPlate and Frame Heat Exchanger Hx170"
+C_BM_pf_hex170 = plate_frame_hex_cost(195.96,100,2,2.3,5,950)
+
+print "\nPlate and Frame Heat Exchanger Hx180"
+C_BM_pf_hex180 = plate_frame_hex_cost(4653.02,40,2,2.3,5,10000)
+
+print "\nPlate and Frame Heat Exchanger Hx190"
+C_BM_pf_hex190 = plate_frame_hex_cost(969.35,100,2,2.3,5,2500)
+
+print "\nPlate and Frame Heat Exchanger Hx200"
+C_BM_pf_hex200 = plate_frame_hex_cost(313.22,106,2,2.3,5,1300)
+
+print "\nPlate and Frame Heat Exchanger Hx210"
+C_BM_pf_hex210 = plate_frame_hex_cost(1774.05,40,2,2.3,5,5000)
+
+print "\nPlate and Frame Heat Exchanger Hx220"
+C_BM_pf_hex220 = plate_frame_hex_cost(1069.06,106,2,2.3,5,2500)
+
+print "\nPlate and Frame Heat Exchanger Hx230"
+C_BM_pf_hex230 = plate_frame_hex_cost(10563.62,243,2,2.3,5,5000)
+
+print "\nPlate and Frame Heat Exchanger Hx240"
+C_BM_pf_hex240 = plate_frame_hex_cost(5235.44,106,2,2.3,5,5500)
+
+
 # Arguments are passed in the format L,D,Cp,Fp,Fm,Fa_BM
-print "\nSeparator 1"
-C_BM_S1 = separatorcost(1.676,0.3048,1.1e3,1,1,1.5)
-print "\nSeparator 2"
-C_BM_S2 = separatorcost(1.676,0.4576,1.6e3,1,1,1.5)
-print "\nSeparator 3"
-C_BM_S3 = separatorcost(1.676,0.3048,1.1e3,1.5,1,4)
-print "\nSeparator 4"
-C_BM_S4 = separatorcost(1.829,0.3048,1.3e3,1,1,1.5)
+print "\nSeparator Sep100"
+C_BM_S100 = separatorcost(2.13,0.762,5500,1.1,4,10)
+print "\nSeparator Sep110"
+C_BM_S110 = separatorcost(1.98,0.762,5100,1.1,4,10)
+print "\nSeparator Sep120"
+C_BM_S120 = separatorcost(1.37,0.3048,2500,1.3,4,10)
+print "\nSeparator Sep130"
+C_BM_S130 = separatorcost(1.9812,0.762,5100,1.15,4,10)
+print "\nSeparator Sep140"
+C_BM_S140 = separatorcost(1.98,0.6096,4900,1.1,4,10)
+print "\nSeparator Sep150"
+C_BM_S150 = separatorcost(1.68,0.6096,4500,1.1,4,10)
+print "\nSeparator Sep160"
+C_BM_S160 = separatorcost(1.6764,0.6096,4000,1.1,4,10)
+print "\nSeparator Sep170"
+C_BM_S170 = separatorcost(2.7432,0.4572,5500,1.1,4,10)
+print "\nSeparator Sep180"
+C_BM_S180 = separatorcost(3.048,0.6096,10000,1.1,4,10)
 
-print "\nCompressor 1"
-C_BM_C1 = compcost(22000,2.2,28000,2)
-print "\nCompressor 2"
-C_BM_C2 = compcost(85000,2.2,150000,2)
 
-print "\nGlycol Contactor Absorber"
+#Arguments are in the format Cp_c,F_BM_c,C_BM_d
+print "\nBlower C110"
+C_BM_C110 = comp_blow_cost(600000,6.3,35000)
+print "\nBlower C120"
+C_BM_C120 = comp_blow_cost(25000,6.3,14000)
+print "\nBlower C130"
+C_BM_C130 = comp_blow_cost(50000,6.3,35000)
 
-Cp = 95 # From U&V Fig 5.36
-F_BM = 2.2 # Used U&V Fig 5.38 for 
-           # F_BM = F_p * F_M
-N_act = 11
-f_q = 1.19
-C_BM_GC = absorber(Cp,F_BM,N_act,f_q) # interpolated between number of trays 10 and 20
-                               # and f_q 1.2 and 1.05 respectively
 
-print "\nPacked Column"
-C_BM_PC = packedcolumn_reboiler_pump(600,1) # Used U&V Fig 5.47 for Cp and F_BM
+#Arguments are in the format Cp,Fm,Fp,Fa_BM
+print "\nPump P110"
+C_BM_P110 = pump_costing(2000,1.9,1,5)
+print "\nPump P110"
+C_BM_P120 = pump_costing(900,1.9,1,5)
+print "\nPump P110"
+C_BM_P130 = pump_costing(5500,1.9,1,5)
 
-# Got reboiler duty, Q = 90 kW and delta T = 17 deg C from VMG Sim
-# Used Table 4.15c to get the heat coefficient, U = 620 J m^-2 K^-1 s^-1
-# Exchanger surface area = Q/(delta T * U) = 8.53 m^2
-# Used U&V Fig 5.37 to get Cp = 7100
-# Used U&V Fig 5.38 for F_BM = 3, from F_p * F_M = 1.1 * 1 = 1.1
 
-print "\nReboiler"
-C_BM_reb = packedcolumn_reboiler_pump(7100,3)
-
-print "\nPump"
-C_BM_pump = packedcolumn_reboiler_pump(19000,3.5) # Used U&V Fig 5.36 for Cp = 19000
-                                            # Used U&V Fig 5.38 for 
-                                            # F_BM = F_p * F_M = 
-# Used F_p from Fig 5.50
-
-# Shell and Tube inlet and outlet temperatures are taken from VMG Sim
-# Shell Inlet T = 205 deg C. Outlet T = 165.9 deg C
-# Tube Inlet T = 125.2 deg C. Outlet T = 164.1 deg C
-# Cross-flow heat exchanger
-
-print "\nSurge Tank Heat Exchanger"
-tube_outlet_T = 164.1
-tube_inlet_T = 125.2
-shell_outlet_T = 165.9
-shell_inlet_T = 205.2
-S_R = hex_s_r_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T)
-print "S = ", S_R[0]
-print "R = ", S_R[1]
-F_T = 0.8 # From fig 4.22
-print "MTD correction factor, F_T from Fig 4.22 = ", F_T
-U = 306 # From Table 4.15c J m^-2 K^-1 s^-1
-print "Heat coefficient from Table 4.15c = ", U
-Q = 67 # kW from VMG SIM
-print "Surge Tank Heat Exchanger Duty = ", Q
-hex_surfarea = hex_surfarea_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T,F_T,U,(Q*1e3))
-print "Heat Exchanger Surface Area = ", hex_surfarea
-Cp_vessel = 5000 # From Fig 5.23a
-F_BM_vessel = 3 # From Fig 5.23a
-F_p_vessel = 1 # From Fig 5.23a
-Cp_coils = 4200 # From Fig 5.23b
-F_BM_coils = 1 # From Fig 5.23b
-C_BM_ST_HEX = hex_costing(Cp_vessel,F_BM_vessel,F_p_vessel,Cp_coils,F_BM_coils)
-
-print "\nHeat Exchanger 2"
-tube_outlet_T = 136.7
-tube_inlet_T = 165.9
-shell_outlet_T = 118.1
-shell_inlet_T = 73.1
-F_T = 1 # Unnecessary in this hex
-U = 306 # From Table 4.15c J m^-2 K^-1 s^-1
-print "Heat coefficient from Table 4.15c = ", U
-Q = 48.4 # kW from VMG SIM
-print "Heat Exchanger 2 Duty (in kW) = ", Q
-hex_surfarea = hex_surfarea_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T,F_T,U,(Q*1e3))
-print "Heat Exchanger Surface Area = ", hex_surfarea
-
-Cp = 2300 # From Fig 5.36
-F_m = 1 # Fig 5.36
-F_p = 1 # Fig 5.37
-F_BM = 3 # From Fig 5.38
-Cp_coils = 0 # Because this is a counter current heat exchanger
-F_BM_coils = 0 # Because this is a counter current heat exchanger
-C_BM_HEX2 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
-
-print "\nAir Cooler 1"
-tube_outlet_T = 90.7
-tube_inlet_T = 136.7
-shell_outlet_T = 70
-shell_inlet_T = 30
+print "\nAir Cooler - AC110"
+tube_outlet_T = 20
+tube_inlet_T = 128.8
+shell_outlet_T = 78
+shell_inlet_T = 15
 S_R = hex_s_r_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T)
 print "S = ", S_R[0]
 print "R = ", S_R[1]
@@ -205,30 +238,25 @@ F_p = 1 # From Fig 5.37
 F_BM = 3 # From Fig 5.38
 Cp_coils = 0 # No coils in air cooler
 F_BM_coils = 0 # No coils in air cooler
-C_BM_AC1 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
+C_BM_AC110 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
 
-print "\nAir Cooler 2"
-tube_outlet_T = 44.7
-tube_inlet_T = 90.7
-shell_outlet_T = 40
-shell_inlet_T = 30
-S_R = hex_s_r_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T)
-print "S = ", S_R[0]
-print "R = ", S_R[1]
-F_T = 0.95 # From fig 4.22
-print "MTD correction factor, F_T from Fig 4.22 = ", F_T
-U = 306 # From Table 4.15c J m^-2 K^-1 s^-1
-print "Heat coefficient from Table 4.15c (J m^-2 K^-1 s^-1) = ", U
-Q = 67.9 # kW from VMG SIM
-print "Air Cooler 2 Heat Exchanger Duty (in kW) = ", Q
-hex_surfarea = hex_surfarea_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T,F_T,U,(Q*1e3))
-print "Heat Exchanger Surface Area = ", hex_surfarea
-Cp = 11000 # From Fig 5.40
-F_m = 1 # From Fig 5.40
-F_p = 1 # From Fig 5.37
-F_BM = 3 # From Fig 5.38
-Cp_coils = 0 # No coils in air cooler
-F_BM_coils = 0 # No coils in air cooler
-C_BM_AC2 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
 
-extracosts(C_BM_S1+C_BM_S2+C_BM_S3+C_BM_S4+C_BM_C1+C_BM_C2+C_BM_GC+C_BM_PC+C_BM_reb+C_BM_pump+C_BM_ST_HEX+C_BM_HEX2+C_BM_AC1+C_BM_AC2)
+print "\nMolten Carbonate Fuel Cell"
+C_BM_fc_04 = 2e6 #US$ 2004. From U&V Fig 5.9
+C_BM_fc_16 = fuelcell_costing(C_BM_fc_04)
+
+
+print "\nExpander E110"
+C_BM_exp110 = expander_costing(18000,3.5)
+
+extracosts(C_BM_pf_hex100+C_BM_pf_hex110+C_BM_pf_hex120+ \
+                C_BM_pf_hex130+C_BM_pf_hex140+C_BM_pf_hex150+C_BM_pf_hex160+ \
+                C_BM_pf_hex170+C_BM_pf_hex180+C_BM_pf_hex190+C_BM_pf_hex200+ \
+                C_BM_pf_hex210+C_BM_pf_hex220+C_BM_pf_hex230+C_BM_pf_hex240+ \
+                C_BM_S100+C_BM_S110+C_BM_S120+C_BM_S130+C_BM_S140+C_BM_S150+ \
+                C_BM_S160+C_BM_S170+C_BM_S180+ \
+                C_BM_C110+C_BM_C120+C_BM_C130+ \
+                C_BM_P110+C_BM_P120+C_BM_P130+ \
+                C_BM_AC110+ \
+                C_BM_fc_16+ \
+                C_BM_exp110)
