@@ -14,9 +14,13 @@ import math
 
 USGC_Correction = 1.35
 USDtoCAD = 1.35
-LocationFactor = 1.2
-ContFeeFactor = 1.18
-AuxFactor = 1.21
+LocationFactor = 0.2
+ProjectContFeeFactor = 0.4
+ProcessContFeeFactor = 0.15
+ContractorFeeFactor = 0.03
+SiteDevCost = 0.21
+WorkingCapitalFactor = 0.1
+
 
 def plate_frame_hex_cost(UA_product,U_heattransfcoeff,SandTmodifier,Fp_Fm_prod,Fa_BM,Cp):
     U_heattransfcoeff_modified = U_heattransfcoeff * SandTmodifier    
@@ -119,10 +123,16 @@ def expander_costing(Cp,F_BM):
     return C_BM_2016_CAD
 
 def extracosts(C_BM):
-    C_TM = C_BM * ContFeeFactor * LocationFactor
-    C_GR = C_TM * AuxFactor
-    print "\nTotal module capital, C_TM = ", C_TM
-    print "Total Capital Cost Estimation = ", C_GR
+    C_BM_Contingency = (C_BM * ProjectContFeeFactor) + (C_BM * ProcessContFeeFactor)
+    C_BM_Location = C_BM * LocationFactor
+    C_BM_Site = C_BM * SiteDevCost
+    C_BM_Contractor = C_BM * ContractorFeeFactor
+    C_FC = C_BM + C_BM_Contingency + C_BM_Location + C_BM_Site + C_BM_Contractor
+    C_WC = C_FC * WorkingCapitalFactor    
+    print "\nTotal Bare Module cost, C_BM = ", C_BM    
+    print "Total Fixed Capital, C_FC = ", C_FC
+    print "Total Capital Cost Estimation = ", C_FC+C_WC
+    print "Total Working Capital  = ", C_WC
     
 def usd04tocad16(cost):
     C_BM_2004 = cost
@@ -176,6 +186,12 @@ C_BM_pf_hex230 = plate_frame_hex_cost(10563.62,243,2,2.3,5,5000)
 print "\nPlate and Frame Heat Exchanger Hx240"
 C_BM_pf_hex240 = plate_frame_hex_cost(5235.44,106,2,2.3,5,5500)
 
+print "\nTotal Heat Exchangers C_BM = ", C_BM_pf_hex100+C_BM_pf_hex110+C_BM_pf_hex120+ \
+                C_BM_pf_hex130+C_BM_pf_hex140+C_BM_pf_hex150+C_BM_pf_hex160+ \
+                C_BM_pf_hex170+C_BM_pf_hex180+C_BM_pf_hex190+C_BM_pf_hex200+ \
+                C_BM_pf_hex210+C_BM_pf_hex220+C_BM_pf_hex230+C_BM_pf_hex240
+
+print "\n***********************************************************************************"
 
 # Arguments are passed in the format L,D,Cp,Fp,Fm,Fa_BM
 print "\nSeparator Sep100"
@@ -197,24 +213,32 @@ C_BM_S170 = separatorcost(2.7432,0.4572,5500,1.1,4,10)
 print "\nSeparator Sep180"
 C_BM_S180 = separatorcost(3.048,0.6096,10000,1.1,4,10)
 
+print "\nTotal Separator C_BM = ", C_BM_S100+C_BM_S110+C_BM_S120+C_BM_S130+C_BM_S140+C_BM_S150+ \
+                C_BM_S160+C_BM_S170+C_BM_S180
+
+print "\n***********************************************************************************"
 
 #Arguments are in the format Cp_c,F_BM_c,C_BM_d
 print "\nBlower C110"
-C_BM_C110 = comp_blow_cost(600000,6.3,35000)
+C_BM_C110 = comp_blow_cost(60000,6.3,35000)
 print "\nBlower C120"
 C_BM_C120 = comp_blow_cost(25000,6.3,14000)
 print "\nBlower C130"
 C_BM_C130 = comp_blow_cost(50000,6.3,35000)
-
+print "\nTotal Blower C_BM = ", C_BM_C110+C_BM_C120+C_BM_C130
+                
+print "\n***********************************************************************************"
 
 #Arguments are in the format Cp,Fm,Fp,Fa_BM
 print "\nPump P110"
 C_BM_P110 = pump_costing(2000,1.9,1,5)
-print "\nPump P110"
+print "\nPump P120"
 C_BM_P120 = pump_costing(900,1.9,1,5)
-print "\nPump P110"
+print "\nPump P130"
 C_BM_P130 = pump_costing(5500,1.9,1,5)
+print "\nTotal Pump C_BM = ", C_BM_P110+C_BM_P120+C_BM_P130
 
+print "\n***********************************************************************************"
 
 print "\nAir Cooler - AC110"
 tube_outlet_T = 20
@@ -240,14 +264,45 @@ Cp_coils = 0 # No coils in air cooler
 F_BM_coils = 0 # No coils in air cooler
 C_BM_AC110 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
 
+print "\n***********************************************************************************"
 
 print "\nMolten Carbonate Fuel Cell"
 C_BM_fc_04 = 2e6 #US$ 2004. From U&V Fig 5.9
 C_BM_fc_16 = fuelcell_costing(C_BM_fc_04)
 
+print "\n***********************************************************************************"
 
 print "\nExpander E110"
 C_BM_exp110 = expander_costing(18000,3.5)
+
+print "\n***********************************************************************************"
+
+print "\nHeat Exchanger - Hx100 modelled as S&T Hx"
+tube_outlet_T = 149.6
+tube_inlet_T = 400
+shell_outlet_T = 398
+shell_inlet_T = 52.4
+S_R = hex_s_r_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T)
+print "S = ", S_R[0]
+print "R = ", S_R[1]
+F_T = 1 # From fig 4.22
+print "MTD correction factor, F_T from Fig 4.22 = ", F_T
+U = 44.36 # From Table 4.15c J m^-2 K^-1 s^-1
+print "Heat coefficient from Table 4.15c = ", U
+Q = 3.464e5 # kW from VMG SIM
+print "Air Cooler 1 Exchanger Duty (in kW) = ", Q
+hex_surfarea = hex_surfarea_calc(tube_outlet_T,tube_inlet_T,shell_outlet_T,shell_inlet_T,F_T,U,(Q*1e3))
+print "Heat Exchanger Surface Area = ", hex_surfarea
+Cp = 8000 # From Fig 5.40
+F_m = 1 # From Fig 5.40
+F_p = 1 # From Fig 5.37
+F_BM = 3 # From Fig 5.38
+Cp_coils = 0 # No coils in air cooler
+F_BM_coils = 0 # No coils in air cooler
+C_BM_AC110 = hex_costing(Cp,F_BM,F_p,Cp_coils,F_BM_coils)
+
+print "\n***********************************************************************************"
+
 
 extracosts(C_BM_pf_hex100+C_BM_pf_hex110+C_BM_pf_hex120+ \
                 C_BM_pf_hex130+C_BM_pf_hex140+C_BM_pf_hex150+C_BM_pf_hex160+ \
@@ -260,3 +315,5 @@ extracosts(C_BM_pf_hex100+C_BM_pf_hex110+C_BM_pf_hex120+ \
                 C_BM_AC110+ \
                 C_BM_fc_16+ \
                 C_BM_exp110)
+                
+wait_input_var = input()
